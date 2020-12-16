@@ -52,6 +52,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Pheonix | Mantle")
 	bool bIsMantling = false;
 
+	UPROPERTY(EditAnywhere)
+	TArray<TEnumAsByte<EObjectTypeQuery>> MantleTraceObjects;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pheonix | Mantle")
 	UCurveFloat* MantleCurve;
 	

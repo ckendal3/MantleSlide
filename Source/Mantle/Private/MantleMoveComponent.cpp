@@ -40,6 +40,8 @@ bool UMantleMoveComponent::CheckForMantle()
 	
 	FCollisionParameters Params;
 	Params.CollisionQueryParam.AddIgnoredActor(GetOwner());
+
+	TArray<AActor*> Actors;
 	
 	FHitResult OutHit_Ledge;
 
@@ -48,8 +50,6 @@ bool UMantleMoveComponent::CheckForMantle()
 
 	// Find Mantle To Position (from the top downwards)
 	{
-
-		
 		// Start position is forward two player widths and then Max mantle height from the floor
 		FVector StartPos = GetActorLocation() + (GetOwner()->GetActorForwardVector() * (PlayerRadius * 2));
 		StartPos.Z = (StartPos.Z - PlayerHalfHeight) + MaxMantleHeight;
@@ -61,11 +61,25 @@ bool UMantleMoveComponent::CheckForMantle()
 		// TODO: MANTLE - Set Collision channel to something proper
 		Params.CollisionShape = FCollisionShape::MakeSphere(PlayerRadius);
 		Params.CollisionQueryParam.bReturnPhysicalMaterial = true;
+		//Params.ObjectQueryParam = FCollisionObjectQueryParams(ECC_TO_BITFIELD(ECC_WorldStatic)); // FCollisionObjectQuery has type if you hover over it
+
+		FCollisionObjectQueryParams ObjectQueryParams;
 		
-		bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Ledge, StartPos, EndPos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam);
+		// bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Ledge, StartPos, EndPos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam); // ECC_GameTraceChannel1 is custom trace channel in project settings
+
+		TArray<FHitResult> Hits;
+
+		//bool HasHit = GetWorld()->SweepMultiByObjectType(Hits, StartPos, EndPos, FQuat::Identity, ObjectQueryParams, Params.CollisionShape, Params.CollisionQueryParam);
+		//bool HasHit = GetWorld()->LineTraceMultiByChannel(Hits, StartPos, EndPos, ECC_WorldStatic);
+
+		bool HasHit = UKismetSystemLibrary::SphereTraceMultiForObjects(this, StartPos, EndPos, PlayerRadius, MantleTraceObjects, false, Actors, EDrawDebugTrace::ForDuration, Hits, true);
+
+		UE_LOG(LogTemp, Warning, TEXT("Overlaps: %d"), Hits.Num());
 
 		if(HasHit)
 		{
+			OutHit_Ledge = Hits.Last();
+			
 			// Can we mantle on this material?
 			UMovementRestrictionMaterial* PhysMat = (UMovementRestrictionMaterial*) OutHit_Ledge.PhysMaterial.Get();
 			if(OutHit_Ledge.PhysMaterial.IsValid() && PhysMat && PhysMat->bCanMantle == false)
@@ -74,9 +88,6 @@ bool UMantleMoveComponent::CheckForMantle()
 				ResetMantle();
 				return false;
 			}
-
-			//DrawDebugLine(GetWorld(), StartPos, FVector( OutHit_Ledge.Location.X,  OutHit_Ledge.Location.Y,  OutHit_Ledge.Location.Z - PlayerRadius), FColor::Yellow, false, 1, 2);
-			//DrawDebugSphere(GetWorld(), OutHit_Ledge.Location, PlayerRadius, 16, FColor::Yellow, false, 5, 0);
 		}
 		else
 		{	
@@ -100,7 +111,10 @@ bool UMantleMoveComponent::CheckForMantle()
 			Params.CollisionShape = FCollisionShape::MakeCapsule(PlayerRadius, PlayerHalfHeight);			
 
 			FHitResult OutHit_Capsule;
-			bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Capsule, CapsulePos, CapsulePos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam);
+			//bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Capsule, CapsulePos, CapsulePos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam);
+
+			bool HasHit = UKismetSystemLibrary::CapsuleTraceSingleForObjects(this, CapsulePos, CapsulePos, PlayerRadius, PlayerHalfHeight, MantleTraceObjects, false, Actors, EDrawDebugTrace::ForDuration, OutHit_Capsule, true);
+
 
 			// Can't Mantle
 			if(HasHit)
