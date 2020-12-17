@@ -12,7 +12,7 @@
 
 // TODO: MANTLE - Need to compensate for in air mantling. Need to tighten the mantle min/max heights to make it easier
 // TODO: MANTLE - Need to add look at feature to make mantle less accidental
-// TODO: MANTLE - Need to make sure player velocity isn't opposite of look direction
+// TODO: MANTLE - Make sure hit isn't too far over an edge
 
 void UMantleMoveComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -124,7 +124,17 @@ bool UMantleMoveComponent::CheckForMantle()
 
 bool UMantleMoveComponent::CanMantle()
 {
-	return !bIsMantling;
+	float DotDir = FVector::DotProduct(GetOwner()->GetActorForwardVector() , Velocity.GetSafeNormal2D());
+
+	bool bMovementAllows = false;
+
+	// if not moving backwards or moving very slow
+	if(DotDir > -.1f || Velocity.Size2D() < 5)
+	{
+		bMovementAllows = true;
+	}
+
+	return !bIsMantling && bMovementAllows;
 }
 
 void UMantleMoveComponent::PerformMantle()

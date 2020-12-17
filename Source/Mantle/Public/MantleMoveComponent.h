@@ -49,6 +49,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pheonix | Mantle")
 	float TimeToMantle = 2.f;
 
+	// TODO: REMOVE WHEN MANTLING IS LOCKED DOWN
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pheonix | Mantle")
 	bool bDebugMantle = false;
 
