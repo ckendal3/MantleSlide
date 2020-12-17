@@ -13,7 +13,6 @@
 // TODO: MANTLE - Need to compensate for in air mantling. Need to tighten the mantle min/max heights to make it easier
 // TODO: MANTLE - Need to add look at feature to make mantle less accidental
 // TODO: MANTLE - Need to make sure player velocity isn't opposite of look direction
-// TODO: MANTLE - Need to do a multi-shape sweep to see if there is an open space on the way down (Compare top hit or top position to first hit)
 
 void UMantleMoveComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -48,7 +47,7 @@ bool UMantleMoveComponent::CheckForMantle()
 	float PlayerRadius = CapsuleComp->GetScaledCapsuleRadius();
 	float PlayerHalfHeight = CapsuleComp->GetScaledCapsuleHalfHeight();
 
-	// Find Mantle To Position (from the top downwards)
+	// Find Position to Mantle (from the top downwards)
 	{
 		// Start position is forward two player widths and then Max mantle height from the floor
 		FVector StartPos = GetActorLocation() + (GetOwner()->GetActorForwardVector() * (PlayerRadius * 2));
@@ -58,24 +57,18 @@ bool UMantleMoveComponent::CheckForMantle()
 		FVector EndPos = GetActorLocation() + (GetOwner()->GetActorForwardVector() * (PlayerRadius * 2));
 		EndPos.Z = (EndPos.Z - PlayerHalfHeight) + MinMantleHeight;
 
-		// TODO: MANTLE - Set Collision channel to something proper
+		
 		Params.CollisionShape = FCollisionShape::MakeSphere(PlayerRadius);
 		Params.CollisionQueryParam.bReturnPhysicalMaterial = true;
 		//Params.ObjectQueryParam = FCollisionObjectQueryParams(ECC_TO_BITFIELD(ECC_WorldStatic)); // FCollisionObjectQuery has type if you hover over it
 
 		FCollisionObjectQueryParams ObjectQueryParams;
 		
-		// bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Ledge, StartPos, EndPos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam); // ECC_GameTraceChannel1 is custom trace channel in project settings
+		TArray<FHitResult> Hits;		
 
-		TArray<FHitResult> Hits;
+		bool HasHit = UKismetSystemLibrary::SphereTraceMultiForObjects(this, StartPos, EndPos, PlayerRadius, MantleTraceObjects, false, Actors, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, Hits, true, FColor::Cyan, FColor::Magenta);
 
-		//bool HasHit = GetWorld()->SweepMultiByObjectType(Hits, StartPos, EndPos, FQuat::Identity, ObjectQueryParams, Params.CollisionShape, Params.CollisionQueryParam);
-		//bool HasHit = GetWorld()->LineTraceMultiByChannel(Hits, StartPos, EndPos, ECC_WorldStatic);
-
-		bool HasHit = UKismetSystemLibrary::SphereTraceMultiForObjects(this, StartPos, EndPos, PlayerRadius, MantleTraceObjects, false, Actors, EDrawDebugTrace::ForDuration, Hits, true);
-
-		UE_LOG(LogTemp, Warning, TEXT("Overlaps: %d"), Hits.Num());
-
+		// Found floor
 		if(HasHit)
 		{
 			OutHit_Ledge = Hits.Last();
@@ -84,15 +77,12 @@ bool UMantleMoveComponent::CheckForMantle()
 			UMovementRestrictionMaterial* PhysMat = (UMovementRestrictionMaterial*) OutHit_Ledge.PhysMaterial.Get();
 			if(OutHit_Ledge.PhysMaterial.IsValid() && PhysMat && PhysMat->bCanMantle == false)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("PHYS MATERIAL DOESNT ALLOW MANTLE"));
 				ResetMantle();
 				return false;
 			}
 		}
 		else
-		{	
-			//DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, 1, 2);
-			//DrawDebugSphere(GetWorld(), EndPos, PlayerRadius, 16, FColor::Red, false, 5, 2);
+		{
 			ResetMantle();
 			return false;
 		}
@@ -103,36 +93,18 @@ bool UMantleMoveComponent::CheckForMantle()
 	{
 		// If we hit ground and can walk on it
 		if(OutHit_Ledge.bBlockingHit && IsWalkable(OutHit_Ledge))
-		{
-			// Guarantee that we get off the ground
-			const float ZOffset = .1f;
-		
-			const FVector CapsulePos = OutHit_Ledge.Location + FVector(0, 0, PlayerHalfHeight);
+		{		
+			const FVector CapsulePos = OutHit_Ledge.Location + FVector(0, 0, (PlayerHalfHeight - PlayerRadius + .1f));
 			Params.CollisionShape = FCollisionShape::MakeCapsule(PlayerRadius, PlayerHalfHeight);			
 
 			FHitResult OutHit_Capsule;
-			//bool HasHit = GetWorld()->SweepSingleByChannel(OutHit_Capsule, CapsulePos, CapsulePos, Rot, ECC_Visibility, Params.CollisionShape, Params.CollisionQueryParam);
 
-			bool HasHit = UKismetSystemLibrary::CapsuleTraceSingleForObjects(this, CapsulePos, CapsulePos, PlayerRadius, PlayerHalfHeight, MantleTraceObjects, false, Actors, EDrawDebugTrace::ForDuration, OutHit_Capsule, true);
+			bool HasHit = UKismetSystemLibrary::CapsuleTraceSingleForObjects(this, CapsulePos, CapsulePos, PlayerRadius, PlayerHalfHeight, MantleTraceObjects, false, Actors,bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, OutHit_Capsule, true, FColor::Black, FColor::Blue);
 
 
-			// Can't Mantle
-			if(HasHit)
-			{
-				// DrawDebugCapsule(GetWorld(), FVector(CapsulePos.X, CapsulePos.Y, CapsulePos.Z + PlayerHalfHeight), PlayerHalfHeight, PlayerRadius, Rot, FColor::Red, false, 10.f, 0, 1);
-			}
-			else
-			{
-				// We can mantle
-				FVector TMP_TopLinePos = OutHit_Ledge.Location;
-				TMP_TopLinePos.Z = (TMP_TopLinePos.Z - PlayerHalfHeight) + MaxMantleHeight;
-
-				FVector TMP_CapPos = OutHit_Ledge.Location;
-				TMP_CapPos.Z += (PlayerHalfHeight - PlayerRadius);
-			
-				// DrawDebugLine(GetWorld(), TMP_CapPos, TMP_TopLinePos, FColor::Green, false, 10, 3, 3);			
-				// DrawDebugCapsule(GetWorld(), FVector(TMP_CapPos.X, TMP_CapPos.Y, TMP_CapPos.Z), PlayerHalfHeight, PlayerRadius, Rot, FColor::Green, false, 5.f, 0, 1);
-				
+			// Didn't hit anything, allow mantle
+			if(!HasHit)
+			{				
 				MantleData.bValidMantle = true;
 				MantleData.StartLocation = GetOwner()->GetActorLocation();
 				MantleData.EndLocation = CapsulePos;
@@ -159,10 +131,7 @@ void UMantleMoveComponent::PerformMantle()
 {
 	if(MantleData.bValidMantle)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Is valid Mantle"));
-		
 		bWantsToMantle = true;
-		//GetCharacterOwner()->TeleportTo(MantleData.EndLocation, GetCharacterOwner()->GetActorRotation());		
 	}
 	else
 	{
@@ -180,8 +149,6 @@ void UMantleMoveComponent::UpdateMantle()
 
 	// TODO: See if move is valid
 	GetCharacterOwner()->TeleportTo(NewPos, GetCharacterOwner()->GetActorRotation(), false, false);
-
-	//GEngine->AddOnScreenDebugMessage(9999, 1.f, FColor::Blue, FString::Printf(TEXT("Progress: %f"), NewProgress));
 
 	if(FMath::IsNearlyEqual(NewProgress, 1.f))
 	{		

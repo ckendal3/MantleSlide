@@ -49,6 +49,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pheonix | Mantle")
 	float TimeToMantle = 2.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pheonix | Mantle")
+	bool bDebugMantle = false;
+
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Pheonix | Mantle")
 	bool bIsMantling = false;
 
