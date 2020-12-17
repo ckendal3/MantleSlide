@@ -119,7 +119,7 @@ bool UMantleMoveComponent::CheckForMantle()
 			// Can't Mantle
 			if(HasHit)
 			{
-				DrawDebugCapsule(GetWorld(), FVector(CapsulePos.X, CapsulePos.Y, CapsulePos.Z + PlayerHalfHeight), PlayerHalfHeight, PlayerRadius, Rot, FColor::Red, false, 10.f, 0, 1);
+				// DrawDebugCapsule(GetWorld(), FVector(CapsulePos.X, CapsulePos.Y, CapsulePos.Z + PlayerHalfHeight), PlayerHalfHeight, PlayerRadius, Rot, FColor::Red, false, 10.f, 0, 1);
 			}
 			else
 			{
@@ -130,8 +130,8 @@ bool UMantleMoveComponent::CheckForMantle()
 				FVector TMP_CapPos = OutHit_Ledge.Location;
 				TMP_CapPos.Z += (PlayerHalfHeight - PlayerRadius);
 			
-				DrawDebugLine(GetWorld(), TMP_CapPos, TMP_TopLinePos, FColor::Green, false, 10, 3, 3);			
-				DrawDebugCapsule(GetWorld(), FVector(TMP_CapPos.X, TMP_CapPos.Y, TMP_CapPos.Z), PlayerHalfHeight, PlayerRadius, Rot, FColor::Green, false, 5.f, 0, 1);
+				// DrawDebugLine(GetWorld(), TMP_CapPos, TMP_TopLinePos, FColor::Green, false, 10, 3, 3);			
+				// DrawDebugCapsule(GetWorld(), FVector(TMP_CapPos.X, TMP_CapPos.Y, TMP_CapPos.Z), PlayerHalfHeight, PlayerRadius, Rot, FColor::Green, false, 5.f, 0, 1);
 				
 				MantleData.bValidMantle = true;
 				MantleData.StartLocation = GetOwner()->GetActorLocation();
